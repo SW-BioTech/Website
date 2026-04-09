@@ -381,15 +381,15 @@ main {
 
 .hero__visual {
   position: relative;
-  min-height: 200px;
-  display: flex;
+  min-height: 320px;
+  display: none;
   align-items: center;
   justify-content: center;
 }
 
 @media (min-width: 768px) {
   .hero__visual {
-    min-height: 320px;
+    display: flex;
   }
 }
 
