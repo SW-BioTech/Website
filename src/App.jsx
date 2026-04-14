@@ -8,11 +8,13 @@ import Team from "./components/Team";
 import Newsletter from "./components/Newsletter";
 import Contact from "./components/Contact";
 import Footer from "./components/Footer";
+import Mascot from "./components/Mascot";
 
 export default function App() {
   return (
     <>
       <NeuralCanvas />
+      <Mascot />
 
       <div className="blobs" aria-hidden="true">
         <span className="blob blob--1" />
