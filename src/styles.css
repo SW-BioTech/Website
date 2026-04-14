@@ -307,6 +307,7 @@ main {
   min-height: calc(100dvh - 3.5rem);
   display: flex;
   align-items: center;
+  user-select: none;
   padding: clamp(2rem, 6vw, 4rem) 1rem;
 }
 

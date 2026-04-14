@@ -13,27 +13,34 @@ const FIRE_COLORS = [
 // ---------------------------------------------------------------------------
 // Tuning
 // ---------------------------------------------------------------------------
-const CLUSTER_COUNT_DESKTOP = 10;
-const CLUSTER_COUNT_MOBILE = 6;
-const NODES_PER_CLUSTER_MIN = 18;
-const NODES_PER_CLUSTER_MAX = 30;
-const CLUSTER_RADIUS_MIN = 140;
-const CLUSTER_RADIUS_MAX = 300;
-const SCATTER_COUNT_DESKTOP = 80;      // uniform fill between clusters
-const SCATTER_COUNT_MOBILE = 35;
-const CONNECTION_RADIUS = 180;
-const CONNECTION_PROB = 0.45;
-const LONG_RANGE_COUNT = 25;
+const CLUSTER_COUNT_DESKTOP = 14;
+const CLUSTER_COUNT_MOBILE = 8;
+const NODES_PER_CLUSTER_MIN = 22;
+const NODES_PER_CLUSTER_MAX = 38;
+const CLUSTER_RADIUS_MIN = 130;
+const CLUSTER_RADIUS_MAX = 280;
+const SCATTER_COUNT_DESKTOP = 120;
+const SCATTER_COUNT_MOBILE = 50;
+const CONNECTION_RADIUS = 150;
+const CONNECTION_PROB = 0.55;
 
-const FIRE_INTERVAL_MIN = 120;         // ~2 s at 60 fps
-const FIRE_INTERVAL_MAX = 300;         // ~5 s
-const SIGNAL_SPEED_MIN = 0.003;
-const SIGNAL_SPEED_MAX = 0.007;
+const SIGNAL_SPEED_MIN = 0.008;
+const SIGNAL_SPEED_MAX = 0.018;
 const CASCADE_PROB = 0.55;
 const MAX_CASCADE_DEPTH = 8;
-const MAX_CONCURRENT_SIGNALS = 40;
+const MAX_CONCURRENT_SIGNALS = 60;
 const HOVER_RADIUS = 150;
 const HOVER_BRIGHTNESS = 0.4;
+
+// Burst / silence rhythm
+const BURST_FIRE_COUNT_MIN = 4;
+const BURST_FIRE_COUNT_MAX = 12;
+const BURST_FIRE_GAP_MIN = 4;          // ~65ms between fires in a burst
+const BURST_FIRE_GAP_MAX = 14;         // ~230ms
+const SILENCE_MIN = 120;               // ~2 s
+const SILENCE_MAX = 360;               // ~6 s
+const BURST_COOLDOWN_MIN = 30;
+const BURST_COOLDOWN_MAX = 90;
 
 // ---------------------------------------------------------------------------
 // Gaussian-ish random — for organic clustering
@@ -124,29 +131,6 @@ function buildGraph(w, h, isMobile) {
     }
   }
 
-  // Add a handful of long-range connections for realism
-  for (let k = 0; k < LONG_RANGE_COUNT; k++) {
-    const a = Math.floor(Math.random() * nodes.length);
-    let b = Math.floor(Math.random() * nodes.length);
-    if (a === b) continue;
-    const dx = nodes[b].x - nodes[a].x;
-    const dy = nodes[b].y - nodes[a].y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const mx = (nodes[a].x + nodes[b].x) / 2;
-    const my = (nodes[a].y + nodes[b].y) / 2;
-    const len = dist || 1;
-    const offset = (Math.random() - 0.5) * 60;
-    const edgeIdx = edges.length;
-    edges.push({
-      from: a,
-      to: b,
-      cpx: mx + (-dy / len) * offset,
-      cpy: my + (dx / len) * offset,
-    });
-    nodes[a].connections.push(edgeIdx);
-    nodes[b].connections.push(edgeIdx);
-  }
-
   return { nodes, edges };
 }
 
@@ -199,17 +183,6 @@ function renderStaticLayer(offscreen, w, h, dpr, nodes, edges) {
 }
 
 // ---------------------------------------------------------------------------
-// Position along a quadratic bezier at parameter t
-// ---------------------------------------------------------------------------
-function bezierPoint(ax, ay, cpx, cpy, bx, by, t) {
-  const mt = 1 - t;
-  return {
-    x: mt * mt * ax + 2 * mt * t * cpx + t * t * bx,
-    y: mt * mt * ay + 2 * mt * t * cpy + t * t * by,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 export default function NeuralCanvas() {
@@ -226,12 +199,16 @@ export default function NeuralCanvas() {
       nodes: [],
       edges: [],
       signals: [],
-      nextFire: FIRE_INTERVAL_MIN + Math.random() * (FIRE_INTERVAL_MAX - FIRE_INTERVAL_MIN),
       frame: 0,
       animId: 0,
       w: 0,
       h: 0,
       dpr: 1,
+      // Burst state machine
+      burstState: "silence",            // "silence" | "burst" | "cooldown"
+      stateEnd: 120 + Math.random() * 180,
+      burstRemaining: 0,
+      nextBurstFire: 0,
     };
     state.current = s;
 
@@ -342,44 +319,17 @@ export default function NeuralCanvas() {
         ctx.fill();
       }
 
-      // 5. Draw and advance signals along dendrites
+      // 5. Advance signals (invisible travel — only nodes glow on arrival)
       for (let i = signals.length - 1; i >= 0; i--) {
         const sig = signals[i];
         sig.progress += sig.speed;
 
-        const edge = edges[sig.edgeIdx];
-        const nA = nodes[edge.from];
-        const nB = nodes[edge.to];
-        const t = Math.max(0, Math.min(1, sig.speed > 0 ? sig.progress : 1 - sig.progress));
-        const pos = bezierPoint(nA.x, nA.y, edge.cpx, edge.cpy, nB.x, nB.y, t);
-        const [cr, cg, cb] = sig.color;
-
-        // Signal dot — bright, glowing
-        const dotR = 5;
-        const sg2 = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, dotR + 8);
-        sg2.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, 0.95)`);
-        sg2.addColorStop(0.3, `rgba(${cr}, ${cg}, ${cb}, 0.4)`);
-        sg2.addColorStop(1, "transparent");
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, dotR + 8, 0, Math.PI * 2);
-        ctx.fillStyle = sg2;
-        ctx.fill();
-
-        // Brighten the edge being traversed
-        ctx.beginPath();
-        ctx.moveTo(nA.x, nA.y);
-        ctx.quadraticCurveTo(edge.cpx, edge.cpy, nB.x, nB.y);
-        ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, 0.18)`;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-
-        // Signal arrived at destination
         const done = sig.speed > 0 ? sig.progress >= 1 : sig.progress <= 0;
         if (done) {
+          const edge = edges[sig.edgeIdx];
           const destIdx = sig.speed > 0 ? edge.to : edge.from;
           nodes[destIdx].brightness = 1;
 
-          // Cascade — probability decays with depth so it thins out naturally
           const depthProb = CASCADE_PROB * Math.pow(0.82, sig.depth);
           if (sig.depth < MAX_CASCADE_DEPTH && Math.random() < depthProb) {
             fireNeuron(destIdx, sig.depth + 1);
@@ -388,12 +338,43 @@ export default function NeuralCanvas() {
         }
       }
 
-      // 6. Spawn new fire events at random intervals
-      if (s.frame >= s.nextFire) {
+      // 6. Burst / silence state machine
+      if (s.frame >= s.stateEnd) {
+        if (s.burstState === "silence") {
+          // Transition to burst
+          s.burstState = "burst";
+          s.burstRemaining = BURST_FIRE_COUNT_MIN +
+            Math.floor(Math.random() * (BURST_FIRE_COUNT_MAX - BURST_FIRE_COUNT_MIN));
+          s.nextBurstFire = s.frame;
+          s.stateEnd = Infinity; // burst ends when burstRemaining hits 0
+        } else if (s.burstState === "cooldown") {
+          // After cooldown, either burst again or go silent
+          if (Math.random() < 0.4) {
+            // Chain into another burst
+            s.burstState = "burst";
+            s.burstRemaining = BURST_FIRE_COUNT_MIN +
+              Math.floor(Math.random() * (BURST_FIRE_COUNT_MAX - BURST_FIRE_COUNT_MIN - 2));
+            s.nextBurstFire = s.frame;
+            s.stateEnd = Infinity;
+          } else {
+            s.burstState = "silence";
+            s.stateEnd = s.frame + SILENCE_MIN + Math.random() * (SILENCE_MAX - SILENCE_MIN);
+          }
+        }
+      }
+
+      if (s.burstState === "burst" && s.frame >= s.nextBurstFire && s.burstRemaining > 0) {
         const startNode = Math.floor(Math.random() * nodes.length);
         fireNeuron(startNode, 0);
-        s.nextFire = s.frame + FIRE_INTERVAL_MIN +
-          Math.random() * (FIRE_INTERVAL_MAX - FIRE_INTERVAL_MIN);
+        s.burstRemaining--;
+        s.nextBurstFire = s.frame + BURST_FIRE_GAP_MIN +
+          Math.random() * (BURST_FIRE_GAP_MAX - BURST_FIRE_GAP_MIN);
+
+        if (s.burstRemaining <= 0) {
+          s.burstState = "cooldown";
+          s.stateEnd = s.frame + BURST_COOLDOWN_MIN +
+            Math.random() * (BURST_COOLDOWN_MAX - BURST_COOLDOWN_MIN);
+        }
       }
 
       s.animId = requestAnimationFrame(draw);
@@ -415,11 +396,36 @@ export default function NeuralCanvas() {
     };
     const onLeave = () => { s.mouse = { x: -9999, y: -9999 }; };
 
+    function findNearest(px, py) {
+      let best = -1, bestDist = Infinity;
+      for (let i = 0; i < s.nodes.length; i++) {
+        const dx = s.nodes[i].x - px;
+        const dy = s.nodes[i].y - py;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      return best;
+    }
+
+    const onMouseDown = (e) => {
+      const idx = findNearest(e.clientX, e.clientY);
+      if (idx >= 0) fireNeuron(idx, 0);
+    };
+    const onTouchStart = (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      s.mouse = { x: t.clientX, y: t.clientY };
+      const idx = findNearest(t.clientX, t.clientY);
+      if (idx >= 0) fireNeuron(idx, 0);
+    };
+
     window.addEventListener("resize", onResize);
     window.addEventListener("mousemove", onMouse);
     window.addEventListener("touchmove", onTouch, { passive: true });
     window.addEventListener("mouseleave", onLeave);
     window.addEventListener("touchend", onLeave);
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
 
     return () => {
       cancelAnimationFrame(s.animId);
@@ -429,6 +435,8 @@ export default function NeuralCanvas() {
       window.removeEventListener("touchmove", onTouch);
       window.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("touchend", onLeave);
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("touchstart", onTouchStart);
     };
   }, []);
 
