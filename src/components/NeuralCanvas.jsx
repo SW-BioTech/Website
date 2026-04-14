@@ -55,11 +55,32 @@ function gaussRand() {
 // ---------------------------------------------------------------------------
 // Graph generation — clustered neurons + curved dendrites
 // ---------------------------------------------------------------------------
+function addEdge(nodes, edges, i, j) {
+  const dx = nodes[j].x - nodes[i].x;
+  const dy = nodes[j].y - nodes[i].y;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const mx = (nodes[i].x + nodes[j].x) / 2;
+  const my = (nodes[i].y + nodes[j].y) / 2;
+  const perpX = -dy / dist;
+  const perpY = dx / dist;
+  const offset = (Math.random() - 0.5) * 35;
+  const edgeIdx = edges.length;
+  edges.push({
+    from: i,
+    to: j,
+    cpx: mx + perpX * offset,
+    cpy: my + perpY * offset,
+  });
+  nodes[i].connections.push(edgeIdx);
+  nodes[j].connections.push(edgeIdx);
+}
+
 function buildGraph(w, h, isMobile) {
   const clusterCount = isMobile ? CLUSTER_COUNT_MOBILE : CLUSTER_COUNT_DESKTOP;
   const nodes = [];
   const edges = [];
   const pad = 60;
+  const clusterRanges = []; // [startIdx, endIdx) per cluster
 
   // Place cluster centres across the viewport
   const centres = Array.from({ length: clusterCount }, () => ({
@@ -69,6 +90,7 @@ function buildGraph(w, h, isMobile) {
 
   // Populate each cluster with neurons (gaussian distribution from centre)
   for (const c of centres) {
+    const start = nodes.length;
     const count = NODES_PER_CLUSTER_MIN +
       Math.floor(Math.random() * (NODES_PER_CLUSTER_MAX - NODES_PER_CLUSTER_MIN));
     const radius = CLUSTER_RADIUS_MIN +
@@ -86,6 +108,7 @@ function buildGraph(w, h, isMobile) {
         baseBrightness: 0.2 + Math.random() * 0.15,
       });
     }
+    clusterRanges.push([start, nodes.length]);
   }
 
   // Scatter fill neurons uniformly so there are no dead zones
@@ -110,24 +133,38 @@ function buildGraph(w, h, isMobile) {
       if (dist > CONNECTION_RADIUS) continue;
       const prob = (1 - dist / CONNECTION_RADIUS) * CONNECTION_PROB;
       if (Math.random() > prob) continue;
+      addEdge(nodes, edges, i, j);
+    }
+  }
 
-      // Quadratic bezier control point — offset perpendicular to midpoint
-      const mx = (nodes[i].x + nodes[j].x) / 2;
-      const my = (nodes[i].y + nodes[j].y) / 2;
-      const len = dist || 1;
-      const perpX = -dy / len;
-      const perpY = dx / len;
-      const offset = (Math.random() - 0.5) * 35;
+  // Guarantee at least one connection between every pair of clusters
+  for (let a = 0; a < clusterRanges.length; a++) {
+    for (let b = a + 1; b < clusterRanges.length; b++) {
+      const [aStart, aEnd] = clusterRanges[a];
+      const [bStart, bEnd] = clusterRanges[b];
 
-      const edgeIdx = edges.length;
-      edges.push({
-        from: i,
-        to: j,
-        cpx: mx + perpX * offset,
-        cpy: my + perpY * offset,
-      });
-      nodes[i].connections.push(edgeIdx);
-      nodes[j].connections.push(edgeIdx);
+      // Check if any edge already links these two clusters
+      let linked = false;
+      for (const edge of edges) {
+        const fInA = edge.from >= aStart && edge.from < aEnd;
+        const fInB = edge.from >= bStart && edge.from < bEnd;
+        const tInA = edge.to >= aStart && edge.to < aEnd;
+        const tInB = edge.to >= bStart && edge.to < bEnd;
+        if ((fInA && tInB) || (fInB && tInA)) { linked = true; break; }
+      }
+      if (linked) continue;
+
+      // Find closest node pair between the two clusters and force a connection
+      let bestI = aStart, bestJ = bStart, bestDist = Infinity;
+      for (let i = aStart; i < aEnd; i++) {
+        for (let j = bStart; j < bEnd; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const d = dx * dx + dy * dy;
+          if (d < bestDist) { bestDist = d; bestI = i; bestJ = j; }
+        }
+      }
+      addEdge(nodes, edges, bestI, bestJ);
     }
   }
 

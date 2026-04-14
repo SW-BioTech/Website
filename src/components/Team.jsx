@@ -2,16 +2,16 @@ import { motion } from "framer-motion";
 
 const TEAM = [
   {
-    name: "Wiktor Wiejak",
-    role: "Co-organiser",
-    linkedin: "https://linkedin.com/in/wiktor-wiejak",
-    initials: "WW",
-  },
-  {
     name: "Harvey Mitchell",
     role: "Co-organiser",
     linkedin: "https://www.linkedin.com/in/harvey-mitchell-ba1681206/",
     initials: "HM",
+  },
+  {
+    name: "Wiktor Wiejak",
+    role: "Co-organiser",
+    linkedin: "https://linkedin.com/in/wiktor-wiejak",
+    initials: "WW",
   },
 ];
 
