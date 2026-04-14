@@ -1,10 +1,9 @@
-import useReveal from "../hooks/useReveal";
+import { motion } from "framer-motion";
 import useFormSubmit from "../hooks/useFormSubmit";
 
 const ACTION = "https://formspree.io/f/YOUR_CONTACT_FORM_ID";
 
 export default function Contact() {
-  const ref = useReveal();
   const { handleSubmit, status, error, submitting } = useFormSubmit(
     ACTION,
     "Thank you. We will be in touch soon."
@@ -12,7 +11,13 @@ export default function Contact() {
 
   return (
     <section id="contact" className="section section--contact">
-      <div className="section__inner reveal" ref={ref}>
+      <motion.div
+        className="section__inner"
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-10%" }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      >
         <h2 className="section__title">Say hello</h2>
         <p className="section__lead">
           Partnerships, speaking, venue ideas, or general questions &mdash; send
@@ -61,7 +66,7 @@ export default function Contact() {
           </div>
           <button
             type="submit"
-            className="btn btn--primary"
+            className="btn btn--primary btn--ripple"
             disabled={submitting}
           >
             Send message
@@ -69,14 +74,11 @@ export default function Contact() {
         </form>
 
         {status && (
-          <p
-            className="form-hint"
-            data-state={error ? "error" : undefined}
-          >
+          <p className="form-hint" data-state={error ? "error" : undefined}>
             {status}
           </p>
         )}
-      </div>
+      </motion.div>
     </section>
   );
 }

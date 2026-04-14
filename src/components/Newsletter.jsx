@@ -1,10 +1,9 @@
-import useReveal from "../hooks/useReveal";
+import { motion } from "framer-motion";
 import useFormSubmit from "../hooks/useFormSubmit";
 
-const ACTION = "https://formspree.io/f/xnjoeggw";
+const ACTION = "https://formspree.io/f/YOUR_NEWSLETTER_FORM_ID";
 
 export default function Newsletter() {
-  const ref = useReveal();
   const { handleSubmit, status, error, submitting } = useFormSubmit(
     ACTION,
     "Thanks \u2014 you are on the list."
@@ -12,7 +11,13 @@ export default function Newsletter() {
 
   return (
     <section id="newsletter" className="section section--newsletter">
-      <div className="section__inner reveal" ref={ref}>
+      <motion.div
+        className="section__inner"
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-10%" }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      >
         <h2 className="section__title">Stay in the loop</h2>
         <p className="section__lead">
           Occasional emails with event announcements and cluster news. No
@@ -39,7 +44,7 @@ export default function Newsletter() {
           />
           <button
             type="submit"
-            className="btn btn--primary"
+            className="btn btn--primary btn--ripple"
             disabled={submitting}
           >
             Subscribe
@@ -47,14 +52,11 @@ export default function Newsletter() {
         </form>
 
         {status && (
-          <p
-            className="form-hint"
-            data-state={error ? "error" : undefined}
-          >
+          <p className="form-hint" data-state={error ? "error" : undefined}>
             {status}
           </p>
         )}
-      </div>
+      </motion.div>
     </section>
   );
 }

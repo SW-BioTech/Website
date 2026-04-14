@@ -1,20 +1,21 @@
-const EVENTBRITE_URL =
-  "https://www.eventbrite.co.uk/e/discovering-south-west-biotech-tickets-1980147469385";
+import { motion } from "framer-motion";
+
+const EVENTBRITE_URL = "#events";
 
 export default function Footer() {
   return (
-    <footer className="site-footer">
+    <motion.footer
+      className="site-footer"
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+    >
       <div className="site-footer__inner">
         <p className="site-footer__brand">South West Biotech</p>
         <p className="site-footer__tag">Biotech cluster &middot; Exeter</p>
         <div className="site-footer__links">
-          <a
-            href={EVENTBRITE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Eventbrite
-          </a>
+          <a href={EVENTBRITE_URL}>Events</a>
           <a href="#contact">Contact</a>
         </div>
         <p className="site-footer__legal">
@@ -22,6 +23,6 @@ export default function Footer() {
           reserved.
         </p>
       </div>
-    </footer>
+    </motion.footer>
   );
 }
