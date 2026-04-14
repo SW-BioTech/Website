@@ -422,7 +422,11 @@ export default function NeuralCanvas() {
     draw();
 
     let resizeTimer;
+    let lastWidth = s.w;
     const onResize = () => {
+      const newWidth = window.innerWidth;
+      if (newWidth === lastWidth) return; // ignore address-bar hide/show
+      lastWidth = newWidth;
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(init, 200);
     };
