@@ -13,7 +13,7 @@ const PAST_EVENTS = [
     title: "Discovering South West Biotech",
     date: "25 Feb 2026",
     venue: "Exeter Innovation Hub",
-    attendees: 84,
+    attendees: 34,
     description:
       "Our inaugural meetup bringing together researchers, founders, and biotech-curious minds from across the South West for an evening of talks and networking.",
     url: "https://www.eventbrite.co.uk/e/discovering-south-west-biotech-tickets-1980147469385",
@@ -24,7 +24,7 @@ const PAST_EVENTS = [
     title: "Science to Startup: Into Biotech Entrepreneurship",
     date: "25 Mar 2026",
     venue: "XFi Building, Exeter",
-    attendees: null,
+    attendees: 28,
     description:
       "A deep-dive into turning research into ventures — covering funding, IP, and the journey from lab bench to biotech company.",
     url: "https://www.eventbrite.co.uk/e/science-to-startup-into-biotech-entrepreneurship-tickets-1983945836403",
