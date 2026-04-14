@@ -26,19 +26,24 @@ const CONNECTION_PROB = 0.55;
 
 const SIGNAL_SPEED_MIN = 0.008;
 const SIGNAL_SPEED_MAX = 0.018;
-const CASCADE_PROB = 0.55;
-const MAX_CASCADE_DEPTH = 8;
+const MAX_CASCADE_DEPTH = 5;
 const MAX_CONCURRENT_SIGNALS = 60;
 const HOVER_RADIUS = 150;
-const HOVER_BRIGHTNESS = 0.4;
+const HOVER_POTENTIAL_BOOST = 0.015;
+
+const LEAK_RATE = 0.985;
+const FIRE_PHASE_SPEED = 0.035;
+const REFRACTORY_MIN = 18;
+const REFRACTORY_MAX = 28;
+const INHIBITORY_RATIO = 0.2;
 
 // Burst / silence rhythm
 const BURST_FIRE_COUNT_MIN = 4;
 const BURST_FIRE_COUNT_MAX = 12;
-const BURST_FIRE_GAP_MIN = 4;          // ~65ms between fires in a burst
-const BURST_FIRE_GAP_MAX = 14;         // ~230ms
-const SILENCE_MIN = 120;               // ~2 s
-const SILENCE_MAX = 360;               // ~6 s
+const BURST_FIRE_GAP_MIN = 4;
+const BURST_FIRE_GAP_MAX = 14;
+const SILENCE_MIN = 120;
+const SILENCE_MAX = 360;
 const BURST_COOLDOWN_MIN = 30;
 const BURST_COOLDOWN_MAX = 90;
 
@@ -70,6 +75,8 @@ function addEdge(nodes, edges, i, j) {
     to: j,
     cpx: mx + perpX * offset,
     cpy: my + perpY * offset,
+    excitatory: Math.random() > INHIBITORY_RATIO,
+    weight: 0.3 + Math.random() * 0.3,
   });
   nodes[i].connections.push(edgeIdx);
   nodes[j].connections.push(edgeIdx);
@@ -89,7 +96,6 @@ function buildGraph(w, h, isMobile) {
 
   // Populate each cluster with neurons (gaussian distribution from centre)
   for (const c of centres) {
-    const start = nodes.length;
     const count = NODES_PER_CLUSTER_MIN +
       Math.floor(Math.random() * (NODES_PER_CLUSTER_MAX - NODES_PER_CLUSTER_MIN));
     const radius = CLUSTER_RADIUS_MIN +
@@ -103,8 +109,11 @@ function buildGraph(w, h, isMobile) {
         y: Math.max(4, Math.min(h - 4, c.y + Math.sin(angle) * dist)),
         r: 2.2 + Math.random() * 2.3,
         connections: [],
-        brightness: 0,
         baseBrightness: 0.2 + Math.random() * 0.15,
+        potential: 0,
+        threshold: 0.4 + Math.random() * 0.3,
+        refractory: 0,
+        firePhase: 0,
       });
     }
   }
@@ -117,8 +126,11 @@ function buildGraph(w, h, isMobile) {
       y: pad * 0.5 + Math.random() * (h - pad),
       r: 2 + Math.random() * 1.8,
       connections: [],
-      brightness: 0,
       baseBrightness: 0.18 + Math.random() * 0.12,
+      potential: 0,
+      threshold: 0.4 + Math.random() * 0.3,
+      refractory: 0,
+      firePhase: 0,
     });
   }
 
@@ -136,6 +148,16 @@ function buildGraph(w, h, isMobile) {
   }
 
   return { nodes, edges };
+}
+
+// ---------------------------------------------------------------------------
+// Action potential waveform — maps firePhase (0→1) to visual brightness
+// ---------------------------------------------------------------------------
+function actionPotentialCurve(phase) {
+  if (phase <= 0.2) return phase / 0.2;
+  if (phase <= 0.35) return 1;
+  if (phase <= 0.7) return 1 - (phase - 0.35) / 0.35;
+  return -0.15 * (1 - (phase - 0.7) / 0.3);
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +181,9 @@ function renderStaticLayer(offscreen, w, h, dpr, nodes, edges) {
     ctx.beginPath();
     ctx.moveTo(nA.x, nA.y);
     ctx.quadraticCurveTo(edge.cpx, edge.cpy, nB.x, nB.y);
-    ctx.strokeStyle = `rgba(${br}, ${bg}, ${bb}, 0.12)`;
+    ctx.strokeStyle = edge.excitatory
+      ? `rgba(${br}, ${bg}, ${bb}, 0.12)`
+      : `rgba(130, 105, 135, 0.10)`;
     ctx.lineWidth = 0.7;
     ctx.stroke();
   }
@@ -189,9 +213,10 @@ function renderStaticLayer(offscreen, w, h, dpr, nodes, edges) {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-export default function NeuralCanvas() {
+export default function NeuralCanvas({ showSignals = false }) {
   const canvasRef = useRef(null);
   const state = useRef(null);
+  const showSignalsRef = useRef(showSignals);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -208,11 +233,12 @@ export default function NeuralCanvas() {
       w: 0,
       h: 0,
       dpr: 1,
-      // Burst state machine
-      burstState: "silence",            // "silence" | "burst" | "cooldown"
+      burstState: "silence",
       stateEnd: 120 + Math.random() * 180,
       burstRemaining: 0,
       nextBurstFire: 0,
+      burstNearby: [],
+      burstFiredCount: 0,
     };
     state.current = s;
 
@@ -232,20 +258,26 @@ export default function NeuralCanvas() {
       s.edges = graph.edges;
       s.signals = [];
       s.frame = 0;
+      s.burstNearby = [];
+      s.burstFiredCount = 0;
 
       renderStaticLayer(offscreen, s.w, s.h, s.dpr, s.nodes, s.edges);
     }
 
-    // ---- Spawn a signal cascade from a neuron ----
+    // ---- Fire a neuron: start action-potential arc + send signals ----
     function fireNeuron(nodeIdx, depth) {
       if (s.signals.length >= MAX_CONCURRENT_SIGNALS) return;
 
       const node = s.nodes[nodeIdx];
-      node.brightness = 1;
+      if (node.refractory > 0 || node.firePhase > 0) return;
+
+      node.firePhase = 0.01;
+      node.refractory = REFRACTORY_MIN +
+        Math.floor(Math.random() * (REFRACTORY_MAX - REFRACTORY_MIN));
+      node.potential = 0;
 
       if (node.connections.length === 0) return;
 
-      // Fan-out decreases with depth: 2-3 at root, 1-2 deeper in
       const maxOut = depth < 2 ? 3 : 2;
       const outCount = 1 + Math.floor(Math.random() * Math.min(maxOut, node.connections.length));
       const shuffled = [...node.connections].sort(() => Math.random() - 0.5);
@@ -266,64 +298,132 @@ export default function NeuralCanvas() {
       }
     }
 
+    // ---- Pick a cluster center + sort nearby neurons for burst firing ----
+    function prepareBurst() {
+      const cx = Math.random() * s.w;
+      const cy = Math.random() * s.h;
+      const nearby = [];
+      for (let i = 0; i < s.nodes.length; i++) {
+        const dx = s.nodes[i].x - cx;
+        const dy = s.nodes[i].y - cy;
+        nearby.push({ idx: i, d: dx * dx + dy * dy });
+      }
+      nearby.sort((a, b) => a.d - b.d);
+      s.burstNearby = nearby;
+      s.burstFiredCount = 0;
+    }
+
     // ---- Animation loop ----
     function draw() {
       const { w, h, dpr, nodes, edges, signals, mouse } = s;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // 1. Blit the static layer (edges + base nodes) — single fast call
       ctx.clearRect(0, 0, w, h);
       ctx.drawImage(offscreen, 0, 0, w, h);
 
       s.frame++;
 
-      // 2. Decay brightness on all nodes
+      // 1. Per-neuron updates: leak potential, advance firePhase, decrement refractory
       for (const node of nodes) {
-        node.brightness *= 0.955;
-        if (node.brightness < 0.005) node.brightness = 0;
+        if (node.potential > 0) {
+          node.potential *= LEAK_RATE;
+          if (node.potential < 0.005) node.potential = 0;
+        } else if (node.potential < 0) {
+          node.potential *= LEAK_RATE;
+          if (node.potential > -0.005) node.potential = 0;
+        }
+
+        if (node.refractory > 0) node.refractory--;
+
+        if (node.firePhase > 0) {
+          node.firePhase += FIRE_PHASE_SPEED;
+          if (node.firePhase >= 1) node.firePhase = 0;
+        }
       }
 
-      // 3. Mouse hover — subtle local highlight
+      // 2. Mouse hover — gently raises nearby neurons' potential
       if (mouse.x > 0 && mouse.y > 0) {
-        for (const node of nodes) {
+        for (let ni = 0; ni < nodes.length; ni++) {
+          const node = nodes[ni];
           const dx = mouse.x - node.x;
           const dy = mouse.y - node.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < HOVER_RADIUS) {
-            const strength = (1 - dist / HOVER_RADIUS) * HOVER_BRIGHTNESS;
-            node.brightness = Math.max(node.brightness, strength);
+          if (dist < HOVER_RADIUS && node.refractory === 0 && node.firePhase === 0) {
+            const boost = (1 - dist / HOVER_RADIUS) * HOVER_POTENTIAL_BOOST;
+            node.potential += boost;
+            if (node.potential >= node.threshold) {
+              fireNeuron(ni, 0);
+            }
           }
         }
       }
 
-      // 4. Draw active (bright) nodes — only those above threshold
+      // 3. Draw active neurons — action-potential arc or sub-threshold glow
       for (const node of nodes) {
-        if (node.brightness < 0.01) continue;
-        const b = node.brightness;
-        const [cr, cg, cb] = b > 0.25
-          ? FIRE_COLORS[Math.floor(b * 2.99) % FIRE_COLORS.length]
-          : BASE_COLOR;
-        const alpha = Math.min(1, b * 0.85);
+        let b = 0;
+        let colorIdx = 0;
 
-        // Core — grows when firing
+        if (node.firePhase > 0) {
+          b = actionPotentialCurve(node.firePhase);
+          if (node.firePhase <= 0.35) colorIdx = 0;
+          else if (node.firePhase <= 0.7) colorIdx = 1;
+          else colorIdx = 2;
+        } else if (node.potential > 0.05) {
+          b = (node.potential / node.threshold) * 0.4;
+          colorIdx = 0;
+        }
+
+        if (Math.abs(b) < 0.01) continue;
+
+        const [cr, cg, cb] = b > 0 ? FIRE_COLORS[colorIdx] : BASE_COLOR;
+        const absB = Math.abs(b);
+        const alpha = Math.min(1, absB * 0.85);
+
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r + b * 2.5, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, node.r + Math.max(0, b) * 2.5, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${alpha})`;
         ctx.fill();
 
-        // Glow halo — large, soft
-        const gr = node.r * 6 + b * 18;
-        const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, gr);
-        grad.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.35})`);
-        grad.addColorStop(0.5, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.08})`);
+        if (b > 0.05) {
+          const gr = node.r * 6 + b * 18;
+          const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, gr);
+          grad.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.35})`);
+          grad.addColorStop(0.5, `rgba(${cr}, ${cg}, ${cb}, ${alpha * 0.08})`);
+          grad.addColorStop(1, "transparent");
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, gr, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
+      }
+
+      // 4. Draw signal pulses traveling along dendrites (when enabled)
+      if (!showSignalsRef.current) { /* skip drawing pulses */ }
+      else for (const sig of signals) {
+        const edge = edges[sig.edgeIdx];
+        const t = Math.max(0, Math.min(1, sig.progress));
+        const nA = nodes[edge.from];
+        const nB = nodes[edge.to];
+        const x = (1 - t) * (1 - t) * nA.x + 2 * (1 - t) * t * edge.cpx + t * t * nB.x;
+        const y = (1 - t) * (1 - t) * nA.y + 2 * (1 - t) * t * edge.cpy + t * t * nB.y;
+
+        const [pr, pg, pb] = sig.color;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${pr}, ${pg}, ${pb}, 0.9)`;
+        ctx.fill();
+
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 8);
+        grad.addColorStop(0, `rgba(${pr}, ${pg}, ${pb}, 0.35)`);
         grad.addColorStop(1, "transparent");
         ctx.beginPath();
-        ctx.arc(node.x, node.y, gr, 0, Math.PI * 2);
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
       }
 
-      // 5. Advance signals (invisible travel — only nodes glow on arrival)
+      // 5. Advance signals — synaptic summation on arrival
       for (let i = signals.length - 1; i >= 0; i--) {
         const sig = signals[i];
         sig.progress += sig.speed;
@@ -332,34 +432,43 @@ export default function NeuralCanvas() {
         if (done) {
           const edge = edges[sig.edgeIdx];
           const destIdx = sig.speed > 0 ? edge.to : edge.from;
-          nodes[destIdx].brightness = 1;
+          const dest = nodes[destIdx];
 
-          const depthProb = CASCADE_PROB * Math.pow(0.82, sig.depth);
-          if (sig.depth < MAX_CASCADE_DEPTH && Math.random() < depthProb) {
+          if (edge.excitatory) {
+            dest.potential += edge.weight;
+          } else {
+            dest.potential -= edge.weight * 0.6;
+          }
+          dest.potential = Math.max(-0.3, dest.potential);
+
+          if (dest.potential >= dest.threshold &&
+              dest.refractory === 0 &&
+              dest.firePhase === 0 &&
+              sig.depth < MAX_CASCADE_DEPTH) {
             fireNeuron(destIdx, sig.depth + 1);
           }
+
           signals.splice(i, 1);
         }
       }
 
-      // 6. Burst / silence state machine
+      // 6. Burst state machine — spatially clustered firing
       if (s.frame >= s.stateEnd) {
         if (s.burstState === "silence") {
-          // Transition to burst
           s.burstState = "burst";
           s.burstRemaining = BURST_FIRE_COUNT_MIN +
             Math.floor(Math.random() * (BURST_FIRE_COUNT_MAX - BURST_FIRE_COUNT_MIN));
           s.nextBurstFire = s.frame;
-          s.stateEnd = Infinity; // burst ends when burstRemaining hits 0
+          s.stateEnd = Infinity;
+          prepareBurst();
         } else if (s.burstState === "cooldown") {
-          // After cooldown, either burst again or go silent
           if (Math.random() < 0.4) {
-            // Chain into another burst
             s.burstState = "burst";
             s.burstRemaining = BURST_FIRE_COUNT_MIN +
               Math.floor(Math.random() * (BURST_FIRE_COUNT_MAX - BURST_FIRE_COUNT_MIN - 2));
             s.nextBurstFire = s.frame;
             s.stateEnd = Infinity;
+            prepareBurst();
           } else {
             s.burstState = "silence";
             s.stateEnd = s.frame + SILENCE_MIN + Math.random() * (SILENCE_MAX - SILENCE_MIN);
@@ -368,8 +477,10 @@ export default function NeuralCanvas() {
       }
 
       if (s.burstState === "burst" && s.frame >= s.nextBurstFire && s.burstRemaining > 0) {
-        const startNode = Math.floor(Math.random() * nodes.length);
-        fireNeuron(startNode, 0);
+        if (s.burstFiredCount < s.burstNearby.length) {
+          fireNeuron(s.burstNearby[s.burstFiredCount].idx, 0);
+          s.burstFiredCount++;
+        }
         s.burstRemaining--;
         s.nextBurstFire = s.frame + BURST_FIRE_GAP_MIN +
           Math.random() * (BURST_FIRE_GAP_MAX - BURST_FIRE_GAP_MIN);
@@ -447,6 +558,10 @@ export default function NeuralCanvas() {
       window.removeEventListener("touchstart", onTouchStart);
     };
   }, []);
+
+  useEffect(() => {
+    showSignalsRef.current = showSignals;
+  }, [showSignals]);
 
   return (
     <canvas

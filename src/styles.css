@@ -295,6 +295,73 @@ body.drawer-open {
 }
 
 /* ======================
+   Signal Toggle
+   ====================== */
+
+.signal-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-glass);
+  backdrop-filter: blur(12px);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.signal-toggle:hover {
+  border-color: rgba(34, 211, 238, 0.3);
+  color: var(--text);
+}
+
+.signal-toggle--on {
+  border-color: rgba(34, 211, 238, 0.4);
+  color: var(--accent-b);
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.08);
+}
+
+.signal-toggle__icon {
+  flex-shrink: 0;
+}
+
+.signal-toggle__label {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .signal-toggle__label {
+    display: inline;
+  }
+}
+
+.signal-toggle--drawer {
+  min-height: 48px;
+  padding: 0.5rem 0;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  font-size: 1.1rem;
+  justify-content: flex-start;
+  gap: 0.6rem;
+}
+
+.signal-toggle--drawer:hover {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+/* ======================
    Hero
    ====================== */
 

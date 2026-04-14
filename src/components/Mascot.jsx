@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 
+const isTouchDevice = () =>
+  typeof window !== "undefined" &&
+  (window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window);
+
 export default function Mascot() {
   const [visible, setVisible] = useState(true);
+  const [label] = useState(() =>
+    isTouchDevice() ? "Tap the background!" : "Hover the background!"
+  );
   const timerRef = useRef(null);
   const wasAwayRef = useRef(false);
 
@@ -42,7 +49,7 @@ export default function Mascot() {
           width="52"
           height="52"
         />
-        <span className="mascot__label">Click the background!</span>
+        <span className="mascot__label">{label}</span>
       </div>
     </div>
   );
