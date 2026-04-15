@@ -37,6 +37,18 @@ const REFRACTORY_MIN = 18;
 const REFRACTORY_MAX = 28;
 const INHIBITORY_RATIO = 0.2;
 
+// Synaptic plasticity
+const EDGE_DECAY_RATE = 0.9997;
+const EDGE_STRENGTHEN = 0.05;
+const EDGE_DEATH_THRESHOLD = 0.05;
+const EDGE_INITIAL_STRENGTH = 0.5;
+const EDGE_NEW_STRENGTH = 0.15;
+const GROWTH_INTERVAL = 90;
+const GROWTH_RADIUS = 200;
+const MAX_CONNECTIONS = 8;
+const PRUNE_INTERVAL = 180;
+const STATIC_REDRAW_INTERVAL = 90;
+
 // Burst / silence rhythm
 const BURST_FIRE_COUNT_MIN = 4;
 const BURST_FIRE_COUNT_MAX = 12;
@@ -60,7 +72,7 @@ function gaussRand() {
 // ---------------------------------------------------------------------------
 // Graph generation — clustered neurons + curved dendrites
 // ---------------------------------------------------------------------------
-function addEdge(nodes, edges, i, j) {
+function addEdge(nodes, edges, i, j, strength = EDGE_INITIAL_STRENGTH) {
   const dx = nodes[j].x - nodes[i].x;
   const dy = nodes[j].y - nodes[i].y;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -77,6 +89,7 @@ function addEdge(nodes, edges, i, j) {
     cpy: my + perpY * offset,
     excitatory: Math.random() > INHIBITORY_RATIO,
     weight: 0.3 + Math.random() * 0.3,
+    strength,
   });
   nodes[i].connections.push(edgeIdx);
   nodes[j].connections.push(edgeIdx);
@@ -95,7 +108,9 @@ function buildGraph(w, h, isMobile) {
   }));
 
   // Populate each cluster with neurons (gaussian distribution from centre)
+  const clusterRanges = [];
   for (const c of centres) {
+    const start = nodes.length;
     const count = NODES_PER_CLUSTER_MIN +
       Math.floor(Math.random() * (NODES_PER_CLUSTER_MAX - NODES_PER_CLUSTER_MIN));
     const radius = CLUSTER_RADIUS_MIN +
@@ -116,6 +131,7 @@ function buildGraph(w, h, isMobile) {
         firePhase: 0,
       });
     }
+    clusterRanges.push([start, nodes.length]);
   }
 
   // Scatter fill neurons uniformly so there are no dead zones
@@ -144,6 +160,22 @@ function buildGraph(w, h, isMobile) {
       const prob = (1 - dist / CONNECTION_RADIUS) * CONNECTION_PROB;
       if (Math.random() > prob) continue;
       addEdge(nodes, edges, i, j);
+    }
+  }
+
+  // Guarantee every cluster neuron has at least one intra-cluster connection
+  for (const [start, end] of clusterRanges) {
+    for (let i = start; i < end; i++) {
+      if (nodes[i].connections.length > 0) continue;
+      let bestJ = -1, bestDist = Infinity;
+      for (let j = start; j < end; j++) {
+        if (j === i) continue;
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; bestJ = j; }
+      }
+      if (bestJ >= 0) addEdge(nodes, edges, i, bestJ);
     }
   }
 
@@ -181,9 +213,10 @@ function renderStaticLayer(offscreen, w, h, dpr, nodes, edges) {
     ctx.beginPath();
     ctx.moveTo(nA.x, nA.y);
     ctx.quadraticCurveTo(edge.cpx, edge.cpy, nB.x, nB.y);
+    const sa = Math.min(1, (edge.strength || EDGE_INITIAL_STRENGTH) * 2);
     ctx.strokeStyle = edge.excitatory
-      ? `rgba(${br}, ${bg}, ${bb}, 0.12)`
-      : `rgba(130, 105, 135, 0.10)`;
+      ? `rgba(${br}, ${bg}, ${bb}, ${0.12 * sa})`
+      : `rgba(130, 105, 135, ${0.10 * sa})`;
     ctx.lineWidth = 0.7;
     ctx.stroke();
   }
@@ -239,6 +272,7 @@ export default function NeuralCanvas({ showSignals = false }) {
       nextBurstFire: 0,
       burstNearby: [],
       burstFiredCount: 0,
+      staticDirty: false,
     };
     state.current = s;
 
@@ -434,10 +468,13 @@ export default function NeuralCanvas({ showSignals = false }) {
           const destIdx = sig.speed > 0 ? edge.to : edge.from;
           const dest = nodes[destIdx];
 
+          edge.strength = Math.min(1.0, edge.strength + EDGE_STRENGTHEN);
+
+          const effectiveWeight = edge.weight * Math.max(0.3, edge.strength);
           if (edge.excitatory) {
-            dest.potential += edge.weight;
+            dest.potential += effectiveWeight;
           } else {
-            dest.potential -= edge.weight * 0.6;
+            dest.potential -= effectiveWeight * 0.6;
           }
           dest.potential = Math.max(-0.3, dest.potential);
 
@@ -490,6 +527,58 @@ export default function NeuralCanvas({ showSignals = false }) {
           s.stateEnd = s.frame + BURST_COOLDOWN_MIN +
             Math.random() * (BURST_COOLDOWN_MAX - BURST_COOLDOWN_MIN);
         }
+      }
+
+      // 7. Synaptic plasticity — decay, prune, grow
+      for (const edge of edges) {
+        edge.strength *= EDGE_DECAY_RATE;
+      }
+
+      if (s.frame % PRUNE_INTERVAL === 0) {
+        for (let i = edges.length - 1; i >= 0; i--) {
+          if (edges[i].strength >= EDGE_DEATH_THRESHOLD) continue;
+          const e = edges[i];
+          nodes[e.from].connections = nodes[e.from].connections.filter(idx => idx !== i);
+          nodes[e.to].connections = nodes[e.to].connections.filter(idx => idx !== i);
+          edges.splice(i, 1);
+          for (const node of nodes) {
+            for (let c = 0; c < node.connections.length; c++) {
+              if (node.connections[c] > i) node.connections[c]--;
+            }
+          }
+        }
+        s.staticDirty = true;
+      }
+
+      if (s.frame % GROWTH_INTERVAL === 0) {
+        const srcIdx = Math.floor(Math.random() * nodes.length);
+        const src = nodes[srcIdx];
+        if (src.connections.length < MAX_CONNECTIONS) {
+          const connectedSet = new Set();
+          connectedSet.add(srcIdx);
+          for (const eIdx of src.connections) {
+            const e = edges[eIdx];
+            connectedSet.add(e.from === srcIdx ? e.to : e.from);
+          }
+          let bestIdx = -1, bestDist = Infinity;
+          const gr2 = GROWTH_RADIUS * GROWTH_RADIUS;
+          for (let j = 0; j < nodes.length; j++) {
+            if (connectedSet.has(j)) continue;
+            const dx = nodes[j].x - src.x;
+            const dy = nodes[j].y - src.y;
+            const d = dx * dx + dy * dy;
+            if (d < bestDist && d <= gr2) { bestDist = d; bestIdx = j; }
+          }
+          if (bestIdx >= 0) {
+            addEdge(nodes, edges, srcIdx, bestIdx, EDGE_NEW_STRENGTH);
+            s.staticDirty = true;
+          }
+        }
+      }
+
+      if (s.staticDirty || s.frame % STATIC_REDRAW_INTERVAL === 0) {
+        renderStaticLayer(offscreen, w, h, dpr, nodes, edges);
+        s.staticDirty = false;
       }
 
       s.animId = requestAnimationFrame(draw);
