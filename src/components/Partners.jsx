@@ -6,6 +6,16 @@ const PARTNERS = [
     url: "https://news.exeter.ac.uk/category/research/exeter-innovation/",
     logo: "./images/partners/exeter-innovation.png",
   },
+  {
+    name: "NIHR HealthTech Research Centre in Sustainable Innovation",
+    url: "https://hrc-sustainable.nihr.ac.uk/",
+    logo: "./images/partners/nihr.png",
+  },
+  {
+    name: "Tech South West",
+    url: "https://techsouthwest.co.uk/",
+    logo: "./images/partners/tech-south-west.png",
+  },
 ];
 
 export default function Partners() {
