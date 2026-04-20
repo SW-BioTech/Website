@@ -28,8 +28,8 @@ const PAST_EVENTS = [
     description:
       "A deep-dive into turning research into ventures — covering funding, IP, and the journey from lab bench to biotech company.",
     url: "https://www.eventbrite.co.uk/e/science-to-startup-into-biotech-entrepreneurship-tickets-1983945836403",
-    image: "./images/events/startup-talk.jpg",
-    imageAlt: "Speaker presenting at Science to Startup event",
+    image: "./images/events/startup-march.jpg",
+    imageAlt: "Science to Startup event at XFi Building, Exeter",
   },
 ];
 
