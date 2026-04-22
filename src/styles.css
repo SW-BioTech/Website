@@ -401,6 +401,182 @@ main {
   }
 }
 
+/* ===== Hero — upcoming event announcement pill ===== */
+.hero__event-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: 100%;
+  padding: 0.45rem 0.95rem 0.45rem 0.7rem;
+  margin: 0 0 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1;
+  box-shadow:
+    0 6px 24px rgba(52, 211, 153, 0.10);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.4s ease;
+  animation: pill-glow 3.6s ease-in-out infinite;
+}
+
+.hero__event-pill:hover,
+.hero__event-pill:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow:
+    0 10px 30px rgba(52, 211, 153, 0.18),
+    0 0 30px rgba(34, 211, 238, 0.14);
+}
+
+/* ===== Sparkles orbiting the pill border ===== */
+.hero__event-pill__sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    var(--accent-a),
+    var(--accent-b) 60%,
+    #ffffff
+  );
+  /* 4-point sparkle/star shape */
+  clip-path: polygon(
+    50% 0%, 58% 42%, 100% 50%, 58% 58%,
+    50% 100%, 42% 58%, 0% 50%, 42% 42%
+  );
+  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.85))
+          drop-shadow(0 0 8px rgba(34, 211, 238, 0.5));
+  animation:
+    sparkle-orbit 7s linear infinite,
+    sparkle-twinkle 1.4s ease-in-out infinite;
+}
+
+/* Three sparkles, evenly spaced 1/3 around the loop */
+.hero__event-pill__sparkle--1 { animation-delay: 0s, 0s; }
+.hero__event-pill__sparkle--2 {
+  animation-delay: -2.33s, -0.45s;
+}
+.hero__event-pill__sparkle--3 {
+  animation-delay: -4.66s, -0.9s;
+}
+
+/*
+ * Trace the perimeter of the pill as a true "stadium" shape:
+ * two straight edges (top/bottom) connected by two semicircular end-caps.
+ *
+ * Each end-cap uses 4 intermediate waypoints to approximate the curve so the
+ * sparkles actually hug the rounded corner instead of cutting straight across.
+ *
+ * Horizontal end-cap radius is ~6% (calibrated for a typical pill width).
+ * Vertical radius is 50% (half the pill height — the pill is fully rounded).
+ * The points around the curve are parametric ellipse samples at 22.5° steps.
+ */
+@keyframes sparkle-orbit {
+  /* ----- Top edge: left → right ----- */
+  0%   { top: 0%;     left: 6%; }
+  42%  { top: 0%;     left: 94%; }
+
+  /* ----- Right end-cap: top → bottom (clockwise) ----- */
+  44%  { top: 14.6%;  left: 98.3%; }
+  46%  { top: 50%;    left: 100%; }
+  48%  { top: 85.4%;  left: 98.3%; }
+  50%  { top: 100%;   left: 94%; }
+
+  /* ----- Bottom edge: right → left ----- */
+  92%  { top: 100%;   left: 6%; }
+
+  /* ----- Left end-cap: bottom → top (clockwise) ----- */
+  94%  { top: 85.4%;  left: 1.7%; }
+  96%  { top: 50%;    left: 0%; }
+  98%  { top: 14.6%;  left: 1.7%; }
+  100% { top: 0%;     left: 6%; }
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% { transform: scale(0.7); opacity: 0.55; }
+  50%      { transform: scale(1.15); opacity: 1; }
+}
+
+.hero__event-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-a);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.85);
+  animation: pulse-dot 2s ease-out infinite;
+  flex-shrink: 0;
+}
+
+.hero__event-pill__label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-a);
+}
+
+.hero__event-pill__sep {
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+.hero__event-pill__date {
+  color: var(--accent-b);
+  font-weight: 600;
+}
+
+.hero__event-pill__title {
+  /* Hidden on small screens — date + label is enough */
+  display: none;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 22rem;
+}
+
+.hero__event-pill__arrow {
+  margin-left: 0.15rem;
+  color: var(--accent-b);
+  font-size: 0.95rem;
+  transition: transform 0.35s ease;
+}
+
+.hero__event-pill:hover .hero__event-pill__arrow {
+  transform: translateX(3px);
+}
+
+@media (min-width: 720px) {
+  .hero__event-pill__title {
+    display: inline;
+  }
+  .hero__event-pill__title::before {
+    content: "·";
+    margin: 0 0.5rem;
+    color: var(--text-muted);
+    opacity: 0.55;
+  }
+}
+
+@keyframes pill-glow {
+  0%, 100% { box-shadow: 0 6px 24px rgba(52, 211, 153, 0.10); }
+  50%      { box-shadow: 0 6px 30px rgba(52, 211, 153, 0.22), 0 0 28px rgba(34, 211, 238, 0.12); }
+}
+
 .hero__eyebrow {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -767,11 +943,277 @@ main {
 }
 
 .upcoming-card {
-  padding: 1.5rem;
+  /* top padding makes room for the banner + flags hanging across it */
+  padding: 0 0 1.5rem;
   margin-bottom: 2rem;
   border-radius: var(--radius-md);
   position: relative;
   border-color: rgba(52, 211, 153, 0.2);
+  overflow: hidden;
+}
+
+/* Inner content (everything below the banner) gets standard horizontal padding */
+.upcoming-card > .upcoming-card__badge,
+.upcoming-card > .upcoming-card__title,
+.upcoming-card > .upcoming-card__meta,
+.upcoming-card > .upcoming-card__desc,
+.upcoming-card > .upcoming-cta {
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+}
+
+.upcoming-card > .upcoming-card__badge {
+  margin-top: 1.25rem;
+}
+
+/* ===== Banner ===== */
+.upcoming-card__banner {
+  position: relative;
+  width: 100%;
+  height: clamp(160px, 26vw, 230px);
+  overflow: hidden;
+}
+
+.upcoming-card__banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.02);
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.upcoming-card:hover .upcoming-card__banner-img {
+  transform: scale(1.06);
+}
+
+.upcoming-card__banner-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    /* Soft darken at the very top so the white pennants pop */
+    linear-gradient(
+      180deg,
+      rgba(6, 10, 16, 0.55) 0%,
+      rgba(6, 10, 16, 0.05) 35%,
+      rgba(6, 10, 16, 0) 55%,
+      rgba(6, 10, 16, 0.45) 85%,
+      rgba(14, 22, 32, 0.95) 100%
+    );
+}
+
+/* ===== Hanging partner flags (inside the card, dangling from the top edge) ===== */
+.upcoming-flags {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.6rem, 2.4vw, 1.4rem);
+  padding: 0 1.25rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.upcoming-flag {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  pointer-events: auto;
+  /* pivot from the top edge of the card so the flag swings like it's pinned there */
+  transform-origin: top center;
+  /* stagger sway so flags don't move in lockstep */
+  animation: flag-sway 6s ease-in-out infinite;
+  animation-delay: calc(var(--flag-index, 0) * -1.3s);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  /* drop-shadow plays nicely with clip-path; box-shadow would be clipped away */
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+}
+
+.upcoming-flag:hover,
+.upcoming-flag:focus-visible {
+  /* Swap the slow ambient sway for a quick, pronounced shake on hover */
+  animation: flag-shake 0.55s ease-in-out infinite;
+  z-index: 2;
+  filter:
+    drop-shadow(0 8px 18px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 14px rgba(34, 211, 238, 0.45));
+}
+
+.upcoming-flag__pennant {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(40px, 9vw, 54px);
+  /* a little taller than wide so the swallow-tail has room to read */
+  height: clamp(50px, 11vw, 66px);
+  padding: 6px 6px 14px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(245, 248, 252, 0.96) 100%
+  );
+  /* Swallow-tail flag: rectangle with a V-cut at the bottom forming two spikes */
+  clip-path: polygon(
+    0% 0%,
+    100% 0%,
+    100% 100%,
+    50% 65%,
+    0% 100%
+  );
+  /* Subtle wind ripple — staggered per flag via the wrapper's --flag-index */
+  transform-origin: top center;
+  animation: flag-wave 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--flag-index, 0) * -0.6s);
+}
+
+.upcoming-flag__img {
+  display: block;
+  max-width: 100%;
+  max-height: 70%; /* leave room for the swallow tail below */
+  object-fit: contain;
+}
+
+.upcoming-flag__placeholder {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(6, 10, 16, 0.55);
+  letter-spacing: 0.04em;
+  /* nudge up so the label sits in the rectangular body, not on the V-cut */
+  transform: translateY(-25%);
+}
+
+@keyframes flag-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+/* Faster, wider swing for hover — pivots from the top.
+   Scale is held larger throughout so the flag visibly pops out. */
+@keyframes flag-shake {
+  0%   { transform: rotate(0deg) scale(1.18); }
+  20%  { transform: rotate(-10deg) scale(1.18); }
+  40%  { transform: rotate(8deg) scale(1.18); }
+  60%  { transform: rotate(-7deg) scale(1.18); }
+  80%  { transform: rotate(5deg) scale(1.18); }
+  100% { transform: rotate(0deg) scale(1.18); }
+}
+
+/* Wind ripple — gentle skew + slight horizontal squash to fake fabric flutter */
+@keyframes flag-wave {
+  0%, 100% { transform: skewX(-3deg) scaleX(1); }
+  25%      { transform: skewX(0deg)  scaleX(0.96); }
+  50%      { transform: skewX(3deg)  scaleX(1); }
+  75%      { transform: skewX(0deg)  scaleX(0.96); }
+}
+
+@media (max-width: 480px) {
+  .upcoming-card__banner { height: 150px; }
+  .upcoming-flags { padding: 0 0.5rem; gap: 0.5rem; }
+}
+
+/* ===== Venue lock + dual CTA ===== */
+.upcoming-card__venue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.upcoming-card__lock {
+  font-size: 0.85rem;
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.35));
+}
+
+.upcoming-cta {
+  margin-top: 0.5rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(52, 211, 153, 0.08),
+      rgba(34, 211, 238, 0.06) 60%,
+      rgba(167, 139, 250, 0.08)
+    );
+  border: 1px solid rgba(52, 211, 153, 0.18);
+}
+
+.upcoming-cta__lead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.upcoming-cta__lead strong {
+  color: var(--accent-a);
+  font-weight: 600;
+}
+
+.upcoming-cta__pulse {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent-a);
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+  animation: pulse-dot 2s ease-out infinite;
+}
+
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70% { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+.upcoming-cta__buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@media (min-width: 480px) {
+  .upcoming-cta__buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+.upcoming-cta__btn {
+  flex: 1 1 auto;
+  gap: 0.55rem;
+  padding-left: 0.55rem;
+}
+
+.upcoming-cta__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 50%;
+  background: rgba(4, 16, 22, 0.18);
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #041016;
+  border: 1px solid rgba(4, 16, 22, 0.18);
 }
 
 .upcoming-card__badge {

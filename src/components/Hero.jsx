@@ -25,6 +25,32 @@ export default function Hero() {
         animate="show"
       >
         <div className="hero__copy">
+          <motion.a
+            className="hero__event-pill"
+            href="#events"
+            variants={fadeUp}
+          >
+            <span
+              className="hero__event-pill__sparkle hero__event-pill__sparkle--1"
+              aria-hidden="true"
+            />
+            <span
+              className="hero__event-pill__sparkle hero__event-pill__sparkle--2"
+              aria-hidden="true"
+            />
+            <span
+              className="hero__event-pill__sparkle hero__event-pill__sparkle--3"
+              aria-hidden="true"
+            />
+            <span className="hero__event-pill__dot" aria-hidden="true" />
+            <span className="hero__event-pill__label">Next event</span>
+            <span className="hero__event-pill__sep" aria-hidden="true">·</span>
+            <span className="hero__event-pill__date">19 June 2026</span>
+            <span className="hero__event-pill__title">
+              Biotech in the South West: Panel Discussion
+            </span>
+            <span className="hero__event-pill__arrow" aria-hidden="true">→</span>
+          </motion.a>
           <motion.p className="hero__eyebrow" variants={fadeUp}>
             Exeter &middot; South West England
           </motion.p>
@@ -38,11 +64,11 @@ export default function Hero() {
             connections across life sciences and technology.
           </motion.p>
           <motion.div className="hero__actions" variants={fadeUp}>
-            <a className="btn btn--primary btn--ripple" href="#newsletter">
-              Subscribe for updates
+            <a className="btn btn--primary btn--ripple" href="#events">
+              See upcoming event
             </a>
-            <a className="btn btn--ghost" href="#events">
-              Upcoming events
+            <a className="btn btn--ghost" href="#newsletter">
+              Subscribe for updates
             </a>
           </motion.div>
         </div>
