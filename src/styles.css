@@ -1158,6 +1158,11 @@ main {
   color: var(--text);
 }
 
+.upcoming-cta__lead-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .upcoming-cta__lead strong {
   color: var(--accent-a);
   font-weight: 600;

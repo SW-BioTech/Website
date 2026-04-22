@@ -154,8 +154,11 @@ export default function Events() {
           <div className="upcoming-cta">
             <p className="upcoming-cta__lead">
               <span className="upcoming-cta__pulse" aria-hidden="true" />
-              Get in touch for <strong>early &amp; exclusive access</strong> —
-              tickets and venue are released to our network first.
+              <span className="upcoming-cta__lead-text">
+                Get in touch for{" "}
+                <strong>early &amp; exclusive access</strong> — tickets and
+                venue are released to our network first.
+              </span>
             </p>
             <div className="upcoming-cta__buttons">
               {UPCOMING.contacts.map((c) => (
