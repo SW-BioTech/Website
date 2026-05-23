@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 const NAV_LINKS = [
   { href: "#about", label: "About" },
   { href: "#events", label: "Events" },
+  { href: "#team", label: "Organisers" },
   { href: "#newsletter", label: "Newsletter" },
   { href: "#contact", label: "Contact", cta: true },
 ];
@@ -20,8 +21,14 @@ export default function Header({ showSignals, onToggleSignals }) {
   return (
     <>
       <header className="site-header">
-        <a className="logo" href="#top">
-          SW Biotech
+        <a className="logo" href="#top" aria-label="SW Biotech — home">
+          <img
+            src="./images/brand/sw-biotech-horizontal-light.png"
+            alt="SW Biotech"
+            className="logo__img"
+            width="200"
+            height="64"
+          />
         </a>
 
         <nav className="nav" aria-label="Primary">

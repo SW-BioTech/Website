@@ -6,12 +6,14 @@ const TEAM = [
     role: "Co-organiser",
     linkedin: "https://www.linkedin.com/in/harvey-mitchell-ba1681206/",
     initials: "HM",
+    photo: "./images/team/harvey.jpeg",
   },
   {
     name: "Wiktor Wiejak",
     role: "Co-organiser",
     linkedin: "https://linkedin.com/in/wiktor-wiejak",
     initials: "WW",
+    photo: "./images/team/wiktor.jpeg",
   },
 ];
 
@@ -38,7 +40,7 @@ export default function Team() {
         viewport={{ once: true, margin: "-10%" }}
         transition={{ duration: 0.6 }}
       >
-        <h2 className="section__title">Who we are</h2>
+        <h2 className="section__title">Organisers</h2>
         <p className="section__lead">
           SW Biotech is run by two people who wanted more biotech conversation in
           the South West &mdash; so they started organising it.
@@ -63,7 +65,18 @@ export default function Team() {
               }}
             >
               <div className="team-card__avatar">
-                <span className="team-card__initials">{person.initials}</span>
+                {person.photo ? (
+                  <img
+                    className="team-card__photo"
+                    src={person.photo}
+                    alt=""
+                    loading="lazy"
+                    width={56}
+                    height={56}
+                  />
+                ) : (
+                  <span className="team-card__initials">{person.initials}</span>
+                )}
               </div>
               <div className="team-card__body">
                 <h3 className="team-card__name">{person.name}</h3>

@@ -12,8 +12,13 @@ export default function Footer() {
       transition={{ duration: 0.6 }}
     >
       <div className="site-footer__inner">
-        <p className="site-footer__brand">South West Biotech</p>
-        <p className="site-footer__tag">Biotech cluster &middot; Exeter</p>
+        <img
+          src="./images/brand/sw-biotech-lockup-light.png"
+          alt="SW Biotech — Southwest Network"
+          className="site-footer__logo"
+          width="220"
+          height="220"
+        />
         <div className="site-footer__links">
           <a href={EVENTBRITE_URL}>Events</a>
           <a href="#contact">Contact</a>
