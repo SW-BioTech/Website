@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 
 const UPCOMING = {
   title: "Biotech in the South West: Panel Discussion",
-  date: "19 June 2026 · 15:00 – 17:30",
+  date: "19 June 2026 · 14:30 – 17:30",
   venue: "Exeter · Venue revealed on registration",
   description:
-    "A panel event exploring the future of biotech in the region. Confirmed panellists include representatives from Innovate UK and SETsquared, with more speakers to be announced. Capacity is intentionally limited — reach out directly to secure early access before public release.",
+    "A panel event exploring the future of biotech in the region. Confirmed panellists include representatives from ARIA, QantX and SETsquared, with more speakers to be announced soon. Capacity is intentionally limited — register now to secure your place.",
+  registerUrl: "https://luma.com/event/evt-SC2Df8F54eVpuE5",
   contacts: [
     {
       name: "Wiktor",
@@ -21,17 +22,6 @@ const UPCOMING = {
     },
   ],
 };
-
-// Draft partner flags hanging from the top of the upcoming-event card.
-// All entries are placeholders — drop a `logo` path on each once the
-// partnering organisations are confirmed.
-const EVENT_PARTNERS = [
-  { name: "Partner one (TBC)", url: "#", label: "P1" },
-  { name: "Partner two (TBC)", url: "#", label: "P2" },
-  { name: "Partner three (TBC)", url: "#", label: "P3" },
-  { name: "Partner four (TBC)", url: "#", label: "P4" },
-  { name: "Partner five (TBC)", url: "#", label: "P5" },
-];
 
 const BANNER = {
   src: "./images/460_460p191_16-10.jpg",
@@ -111,34 +101,6 @@ export default function Events() {
             <div className="upcoming-card__banner-overlay" aria-hidden="true" />
           </div>
 
-          {/* Hanging partner flags */}
-          <div className="upcoming-flags" aria-label="Partnering organisations">
-            {EVENT_PARTNERS.map((p, i) => (
-              <a
-                key={p.name}
-                href={p.url}
-                target={p.url === "#" ? undefined : "_blank"}
-                rel="noopener noreferrer"
-                className="upcoming-flag"
-                style={{ "--flag-index": i, "--flag-total": EVENT_PARTNERS.length }}
-                title={p.name}
-              >
-                <span className="upcoming-flag__pennant">
-                  {p.logo ? (
-                    <img
-                      src={p.logo}
-                      alt={p.name}
-                      className="upcoming-flag__img"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="upcoming-flag__placeholder">{p.label}</span>
-                  )}
-                </span>
-              </a>
-            ))}
-          </div>
-
           <span className="upcoming-card__badge">Up next</span>
           <h3 className="upcoming-card__title">{UPCOMING.title}</h3>
           <p className="upcoming-card__meta">
@@ -155,26 +117,20 @@ export default function Events() {
             <p className="upcoming-cta__lead">
               <span className="upcoming-cta__pulse" aria-hidden="true" />
               <span className="upcoming-cta__lead-text">
-                Get in touch for{" "}
-                <strong>early &amp; exclusive access</strong> — tickets and
-                venue are released to our network first.
+                Register now to <strong>secure your place</strong> — capacity is
+                limited and tickets are approved on a first come, first served
+                basis.
               </span>
             </p>
             <div className="upcoming-cta__buttons">
-              {UPCOMING.contacts.map((c) => (
-                <a
-                  key={c.name}
-                  href={c.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn--primary btn--ripple upcoming-cta__btn"
-                >
-                  <span className="upcoming-cta__avatar" aria-hidden="true">
-                    {c.initials}
-                  </span>
-                  Contact {c.name}
-                </a>
-              ))}
+              <a
+                href={UPCOMING.registerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn--primary btn--ripple upcoming-cta__btn"
+              >
+                Register for Event
+              </a>
             </div>
           </div>
         </motion.div>
