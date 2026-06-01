@@ -5,6 +5,7 @@ const NAV_LINKS = [
   { href: "#events", label: "Events" },
   { href: "#team", label: "Organisers" },
   { href: "#newsletter", label: "Newsletter" },
+  { href: "#/qa", label: "Live Q&A" },
   { href: "#contact", label: "Contact", cta: true },
 ];
 
