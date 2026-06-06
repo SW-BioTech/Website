@@ -3,9 +3,9 @@ import { motion } from "framer-motion";
 const UPCOMING = {
   title: "Biotech in the South West: Panel Discussion",
   date: "19 June 2026 · 14:30 – 17:30",
-  venue: "Exeter · Venue revealed on registration",
+  venue: "Living Systems Institute, Exeter",
   description:
-    "A panel event exploring the future of biotech in the region. Confirmed panellists include representatives from ARIA, QantX and SETsquared, with more speakers to be announced soon. Capacity is intentionally limited — register now to secure your place.",
+    "A panel event exploring the future of biotech in the region. Confirmed panellists include representatives from ARIA, QantX, University of Exeter and SETsquared, with more speakers to be announced soon. Capacity is intentionally limited — register now to secure your place.",
   registerUrl: "https://luma.com/event/evt-SC2Df8F54eVpuE5",
   contacts: [
     {
@@ -23,9 +23,9 @@ const UPCOMING = {
   ],
 };
 
-const BANNER = {
-  src: "./images/460_460p191_16-10.jpg",
-  alt: "Aerial view of the University of Exeter Forum and Northcott Theatre",
+const POSTER = {
+  src: "./images/upcoming-event.png",
+  alt: "State of South West Deeptech: Idea to Product — pilot panel event poster",
 };
 
 const PAST_EVENTS = [
@@ -82,7 +82,7 @@ export default function Events() {
           Subscribe to our newsletter to hear about upcoming events first.
         </p>
 
-        {/* Upcoming event banner */}
+        {/* Upcoming event */}
         <motion.div
           className="upcoming-card glass-card"
           initial={{ opacity: 0, y: 24 }}
@@ -90,47 +90,47 @@ export default function Events() {
           viewport={{ once: true, margin: "-5%" }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* Banner image (sits behind the hanging flags) */}
-          <div className="upcoming-card__banner">
+          {/* Square event poster */}
+          <div className="upcoming-card__poster">
             <img
-              src={BANNER.src}
-              alt={BANNER.alt}
-              className="upcoming-card__banner-img"
+              src={POSTER.src}
+              alt={POSTER.alt}
+              className="upcoming-card__poster-img"
               loading="lazy"
             />
-            <div className="upcoming-card__banner-overlay" aria-hidden="true" />
           </div>
 
-          <span className="upcoming-card__badge">Up next</span>
-          <h3 className="upcoming-card__title">{UPCOMING.title}</h3>
-          <p className="upcoming-card__meta">
-            {UPCOMING.date}
-            <br />
-            <span className="upcoming-card__venue">
-              <span className="upcoming-card__lock" aria-hidden="true">🔒</span>
-              {UPCOMING.venue}
-            </span>
-          </p>
-          <p className="upcoming-card__desc">{UPCOMING.description}</p>
-
-          <div className="upcoming-cta">
-            <p className="upcoming-cta__lead">
-              <span className="upcoming-cta__pulse" aria-hidden="true" />
-              <span className="upcoming-cta__lead-text">
-                Register now to <strong>secure your place</strong> — capacity is
-                limited and tickets are approved on a first come, first served
-                basis.
+          <div className="upcoming-card__content">
+            <span className="upcoming-card__badge">Up next</span>
+            <h3 className="upcoming-card__title">{UPCOMING.title}</h3>
+            <p className="upcoming-card__meta">
+              {UPCOMING.date}
+              <br />
+              <span className="upcoming-card__venue">
+                {UPCOMING.venue}
               </span>
             </p>
-            <div className="upcoming-cta__buttons">
-              <a
-                href={UPCOMING.registerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn--primary btn--ripple upcoming-cta__btn"
-              >
-                Register for Event
-              </a>
+            <p className="upcoming-card__desc">{UPCOMING.description}</p>
+
+            <div className="upcoming-cta">
+              <p className="upcoming-cta__lead">
+                <span className="upcoming-cta__pulse" aria-hidden="true" />
+                <span className="upcoming-cta__lead-text">
+                  Register now to <strong>secure your place</strong> — capacity
+                  is limited and tickets are approved on a first come, first
+                  served basis.
+                </span>
+              </p>
+              <div className="upcoming-cta__buttons">
+                <a
+                  href={UPCOMING.registerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn--primary btn--ripple upcoming-cta__btn"
+                >
+                  Register for Event
+                </a>
+              </div>
             </div>
           </div>
         </motion.div>
